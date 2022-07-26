@@ -82,6 +82,37 @@ ssize_t sys_user_yield() {
 }
 
 //
+// implement the SYS_user_uart_putchar syscall. added @lab4_1
+//
+void sys_user_uart_putchar(uint8 ch) {
+  volatile uint32 *status = (void*)(uintptr_t)0x60000008;
+  volatile uint32 *tx = (void*)(uintptr_t)0x60000004;
+  while (*status & 0x00000008);
+  *tx = ch;
+}
+
+// added @lab4_1
+ssize_t sys_user_uart_getchar() {
+  // TODO (lab4_1 and lab4_2): implment the syscall of sys_user_uart_getchar and modify it in lab4_2.
+  // hint (lab4_1): the functionality of sys_user_uart_getchar is to get data from UART address. therefore,
+  // we should let a pointer point, insert it in 
+  // the rear of ready queue, and finally, schedule a READY process to run.
+  // hint (lab4_2): the functionality of sys_user_uart_getchar is let process sleep and wait for value. therefore,
+  // we should call do_sleep to let process 0 sleep. 
+  // then we should get uartvalue and return.
+    panic( "You have to implement sys_user_uart_getchar to get data from UART using uartgetchar in lab4_1 and modify it in lab4_2.\n" );
+    
+}
+
+// used for car control. added @lab4_1
+void sys_user_uart2_putchar(uint8 ch) {
+  volatile uint32 *status = (void*)(uintptr_t)0x60001008;
+  volatile uint32 *tx = (void*)(uintptr_t)0x60001004;
+  while (*status & 0x00000008);
+  *tx = ch;
+}
+
+//
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
 //
@@ -100,6 +131,13 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_fork();
     case SYS_user_yield:
       return sys_user_yield();
+    // following 3 cases are added @lab4_1
+    case SYS_user_uart_putchar:
+      sys_user_uart_putchar(a1);return 1;
+    case SYS_user_uart_getchar:
+      return sys_user_uart_getchar();
+    case SYS_user_uart2_putchar:
+	    sys_user_uart2_putchar(a1);return 1;
     default:
       panic("Unknown syscall %ld \n", a0);
   }
