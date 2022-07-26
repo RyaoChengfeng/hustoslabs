@@ -71,6 +71,9 @@ typedef struct process_t {
 
   // accounting. added @lab3_3
   int tick_count;
+
+  // uart value. added @lab4_2
+  int value;
 }process;
 
 // switch to run user app
@@ -98,5 +101,15 @@ extern process* current;
 
 // address of the first free page in our simple heap. added @lab2_2
 extern uint64 g_ufree_page;
+
+// prototype declarations added @lab4_2
+// sleep process 0
+void do_sleep();
+// awake process 0
+void do_wake();
+// get value in process 0
+int getuartvalue();
+// update value in process 0
+void updateuartvalue(int value);
 
 #endif

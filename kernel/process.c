@@ -53,6 +53,11 @@ void switch_to(process* proc) {
   proc->trapframe->kernel_satp = read_csr(satp);  // kernel page table
   proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
 
+  // added @lab4_2
+  if(proc->trapframe->regs.a0 == 71){
+    proc->trapframe->regs.a0 = (uint64)getuartvalue();
+  }
+
   // SSTATUS_SPP and SSTATUS_SPIE are defined in kernel/riscv.h
   // set S Previous Privilege mode (the SSTATUS_SPP bit in sstatus register) to User mode.
   unsigned long x = read_csr(sstatus);
@@ -211,4 +216,28 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+// following 4 functions are added @lab4_2
+void do_sleep(){
+  procs[0].status = BLOCKED;
+  schedule();
+}
+
+extern process* ready_queue_head;
+void do_wake(){
+  procs[0].status = READY;
+  current->status = READY;
+  insert_to_ready_queue(&procs[0]);
+  insert_to_ready_queue( current );
+  schedule();
+}
+
+int getuartvalue(){
+  return procs[0].value;
+}
+
+void updateuartvalue(int value)
+{
+  procs[0].value = value;
 }
