@@ -10,6 +10,7 @@
 #include "string.h"
 #include "process.h"
 #include "util/functions.h"
+#include "file.h"
 #include "pmm.h"
 #include "vmm.h"
 #include "sched.h"
@@ -43,9 +44,8 @@ ssize_t sys_user_exit(uint64 code) {
 // maybe, the simplest implementation of malloc in the world ... added @lab2_2
 //
 uint64 sys_user_allocate_page() {
-  void* pa = alloc_page();
-  uint64 va = g_ufree_page;
-  g_ufree_page += PGSIZE;
+  void* pa = alloc_page(); memset((void *)pa, 0, PGSIZE);
+  uint64 va = g_ufree_page; g_ufree_page += PGSIZE;
   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
          prot_to_type(PROT_WRITE | PROT_READ, 1));
 
@@ -60,6 +60,20 @@ uint64 sys_user_free_page(uint64 va) {
   return 0;
 }
 
+//
+// parent and child process share memory.
+//
+uint64 sys_user_allocate_share_page() {
+    void* pa = alloc_page(); memset((void *)pa, 0, PGSIZE);
+    uint64 va = g_ufree_page; g_ufree_page += PGSIZE;
+    user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
+            prot_to_type(PROT_WRITE | PROT_READ, 1));
+
+    current->mapped_info[current->total_mapped_region].va = va;
+    current->mapped_info[current->total_mapped_region].npages = 1;
+    current->mapped_info[current->total_mapped_region++].seg_type = SHARE_SEGMENT;
+    return va;
+}
 //
 // kerenl entry point of naive_fork
 //
@@ -112,6 +126,50 @@ void sys_user_uart2_putchar(uint8 ch) {
   *tx = ch;
 }
 
+ssize_t sys_user_open(char *pathva, int flags) {
+    char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
+    return do_open(pathpa, flags);
+}
+ssize_t sys_user_write(int fd, char *bufva, uint64 count) {
+    int i = 0;
+    while (i < count) {
+        uint64 addr = (uint64)bufva + i;
+        uint64 pa = lookup_pa((pagetable_t)current->pagetable, addr);
+        uint64 off = addr - ROUNDDOWN(addr, PGSIZE);
+        uint64 len = count - i < PGSIZE - off ? count - i : PGSIZE - off;
+        uint64 r = do_write(fd, (char *)pa + off, len);
+        i += r; if (r < len) return i;
+    }
+    return count;
+}
+ssize_t sys_user_close(int fd) {
+    return do_close(fd);
+}
+ssize_t sys_user_ioctl(int fd, uint64 request, char *datava) {
+    char* datapa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), datava);
+    return do_ioctl(fd, request, datapa);
+}
+ssize_t sys_user_mmap(char *addr, uint64 length, int prot, int flags, int fd, int64 offset) {
+    return (ssize_t)do_mmap(NULL, length, prot, flags, fd, offset);
+}
+ssize_t sys_user_munmap(char *addr, uint64 length) {
+    return do_munmap(addr, length);
+}
+ssize_t sys_user_readmmap(char *dstva, char *src, uint64 count) {
+    int i = 0;
+    while (i < count) {
+        uint64 addr = (uint64)dstva + i;
+        uint64 pa = lookup_pa((pagetable_t)current->pagetable, addr);
+        uint64 off = addr - ROUNDDOWN(addr, PGSIZE);
+        uint64 len = count - i < PGSIZE - off ? count - i : PGSIZE - off;
+        int r = read_mmap(src, len, (char *)pa + off);
+        if (r < 0) return -1; else {
+            i += len; src += len;
+        }
+    }
+    return count;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -138,6 +196,22 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_uart_getchar();
     case SYS_user_uart2_putchar:
 	    sys_user_uart2_putchar(a1);return 1;
+    case SYS_user_open:
+      return sys_user_open((char *)a1, a2);
+    case SYS_user_write:
+      return sys_user_write(a1, (char *)a2, a3);
+    case SYS_user_close:
+      return sys_user_close(a1);
+    case SYS_user_ioctl:
+      return sys_user_ioctl(a1, a2, (char *)a3);
+    case SYS_user_mmap:
+      return sys_user_mmap((char *)a1, a2, a3, a4, a5, a6);
+    case SYS_user_munmap:
+      return sys_user_munmap((char *)a1, a2);
+    case SYS_user_readmmap:
+      return sys_user_readmmap((char *)a1, (char *)a2, a3);
+    case SYS_user_allocate_share_page:
+      return sys_user_allocate_share_page();
     default:
       panic("Unknown syscall %ld \n", a0);
   }

@@ -18,6 +18,15 @@
 #define SYS_user_uart_putchar (SYS_user_base + 6)
 #define SYS_user_uart_getchar (SYS_user_base + 7)
 #define SYS_user_uart2_putchar (SYS_user_base + 8)
+#define SYS_user_open (SYS_user_base + 9)
+#define SYS_user_write (SYS_user_base + 10)
+#define SYS_user_close (SYS_user_base + 11)
+#define SYS_user_ioctl (SYS_user_base + 12)
+#define SYS_user_mmap (SYS_user_base + 13)
+#define SYS_user_munmap (SYS_user_base + 14)
+#define SYS_user_readmmap (SYS_user_base + 15)
+#define SYS_user_allocate_share_page (SYS_user_base + 16)
+
 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7);
 
 #endif

@@ -37,6 +37,8 @@ enum segment_type {
   STACK_SEGMENT,   // runtime segment
   CONTEXT_SEGMENT, // trapframe segment
   SYSTEM_SEGMENT,  // system segment
+
+  SHARE_SEGMENT,   // shared segment
 };
 
 // the VM regions mapped to a user process

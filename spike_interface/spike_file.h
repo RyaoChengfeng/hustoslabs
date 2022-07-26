@@ -60,5 +60,6 @@ void spike_file_init(void);
 int spike_file_dup(spike_file_t* f);
 int spike_file_truncate(spike_file_t* f, off_t len);
 int spike_file_stat(spike_file_t* f, struct stat* s);
+spike_file_t* spike_file_get(int fd);
 
 #endif

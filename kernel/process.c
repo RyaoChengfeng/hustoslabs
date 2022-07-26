@@ -207,6 +207,35 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      case DATA_SEGMENT:
+        for( int j=0; j<parent->mapped_info[i].npages; j++ ){
+            uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
+            char *newaddr = alloc_page(); memcpy(newaddr, (void *)addr, PGSIZE);
+            map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,
+                    (uint64)newaddr, prot_to_type(PROT_WRITE | PROT_READ, 1));
+        }
+
+        // after mapping, register the vm region (do not delete codes below!)
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].npages = 
+            parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+        child->total_mapped_region++;
+        break;
+      case SHARE_SEGMENT:
+        for( int j=0; j<parent->mapped_info[i].npages; j++ ){
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
+          map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,
+            addr, prot_to_type(PROT_WRITE | PROT_READ, 1));
+        }
+
+        // after mapping, register the vm region (do not delete codes below!)
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].npages = 
+          parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = SHARE_SEGMENT;
+        child->total_mapped_region++;
+        break;
     }
   }
 
