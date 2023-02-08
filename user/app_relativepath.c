@@ -2,6 +2,17 @@
 #include "util/string.h"
 #include "util/types.h"
 
+void pwd() {
+  char path[30];
+  read_cwd(path);
+  printu("cwd:%s\n", path);
+}
+
+void cd(const char *path) {
+  if (change_cwd(path) != 0)
+    printu("cd failed\n");
+}
+
 int main(int argc, char *argv[]) {
   int fd;
   int MAXBUF = 512;
