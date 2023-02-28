@@ -88,6 +88,28 @@ ssize_t sys_user_yield() {
 // open file
 //
 ssize_t sys_user_open(char *pathva, int flags) {
+    if (*pathva=='.'){
+        char* p = "";
+        do_read_cwd(p);
+        if (*(pathva+1)=='.'){
+            char* path = "";
+            char* last_slash = strchr(p, '/');  // 找到最后一个斜杠
+            if (last_slash != NULL) {
+                *last_slash = '\0';  // 将斜杠替换成字符串结束符
+                path = strchr(p, '/');  // 再次查找上一个斜杠
+                if (path == NULL) {
+                    path = "";
+                } else {
+                    // 将上级目录的字符串截取出来
+                    *path = '\0';
+                    path = p;
+                }
+            }
+            strcat(pathva,p);
+        } else if (*(pathva+1)=='/'){
+            strcat(pathva,p);
+        }
+    }
   char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
   return do_open(pathpa, flags);
 }
@@ -202,6 +224,15 @@ ssize_t sys_user_unlink(char * vfn){
   return do_unlink(pfn);
 }
 
+ssize_t sys_user_rcwd(char * vfn) {
+    strcpy(vfn,"/abc");
+    return 0;
+//    return do_read_cwd(vfn);
+}
+
+ssize_t sys_user_ccwd(char * vfn) {
+    return do_change_cwd(vfn);
+}
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -250,6 +281,10 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_link((char *)a1, (char *)a2);
     case SYS_user_unlink:
       return sys_user_unlink((char *)a1);
+    case SYS_user_rcwd:
+      return sys_user_rcwd((char *)a1);
+    case SYS_user_ccwd:
+      return sys_user_ccwd((char *)a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

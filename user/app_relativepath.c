@@ -14,6 +14,12 @@ void cd(const char *path) {
 }
 
 int main(int argc, char *argv[]) {
+    pwd();
+    exit(0);
+    return 0;
+}
+
+int main1(int argc, char *argv[]) {
   int fd;
   int MAXBUF = 512;
   char buf[MAXBUF];
@@ -50,7 +56,7 @@ int main(int argc, char *argv[]) {
   cd("..");
   printu("change current directory to ..\n");
   pwd();
-  
+
   printu("read: ./hostfile.txt\n");
 
   fd = open("./hostfile.txt", O_RDONLY);

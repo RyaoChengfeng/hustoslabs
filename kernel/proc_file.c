@@ -221,3 +221,21 @@ int do_link(char *oldpath, char *newpath) {
 int do_unlink(char *path) {
   return vfs_unlink(path);
 }
+
+//char* root;
+
+int do_read_cwd(char *path) {
+    strcpy(path,"/");
+    return 0;
+}
+
+int do_change_cwd(char *path) {
+    char * p = "";
+//    strcat(p,root);
+    strcat(p,path);
+    if (do_opendir(p)!=0){
+        return -1;
+    }
+//    strcat(root,path);
+    return 0;
+}
