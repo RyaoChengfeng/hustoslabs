@@ -42,10 +42,9 @@ void handle_mtrap() {
       handle_store_access_fault();
       break;
     case CAUSE_ILLEGAL_INSTRUCTION:
-      // TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction
-      // interception, and finish lab1_2.
-      handle_illegal_instruction();
-
+        // TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction
+        // interception, and finish lab1_2.
+        handle_illegal_instruction();
       break;
     case CAUSE_MISALIGNED_LOAD:
       handle_misaligned_load();
