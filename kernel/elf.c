@@ -7,6 +7,7 @@
 #include "string.h"
 #include "riscv.h"
 #include "spike_interface/spike_utils.h"
+elf_ctx elfsymbol;
 
 typedef struct elf_info_t {
   spike_file_t *f;
@@ -75,6 +76,32 @@ elf_status elf_load(elf_ctx *ctx) {
   return EL_OK;
 }
 
+elf_status elf_load_symbol(elf_ctx *ctx) {
+  elf_section_header sh;
+  int i, off;
+  int strsize = 0;
+  // load symbol table and string table
+  for (i = 0, off = ctx->ehdr.shoff; i < ctx->ehdr.shnum; i++, off += sizeof(elf_section_header)) {
+    if (elf_fpread(ctx, (void *)&sh, sizeof(sh), off) != sizeof(sh)) {
+      return EL_EIO;
+    }
+    if (sh.sh_type == SHT_SYMTAB) {  // symbol table
+      // symbols are palced in sequential order
+      if (elf_fpread(ctx, &ctx->symbols, sh.sh_size, sh.sh_offset) != sh.sh_size) {
+        return EL_EIO;
+      }
+      ctx->symbols_count = sh.sh_size / sizeof(elf_symbol_rec);
+    } else if (sh.sh_type == SHT_STRTAB) {  // string table
+      if (elf_fpread(ctx, &ctx->strtable + strsize, sh.sh_size, sh.sh_offset) != sh.sh_size) {
+        return EL_EIO;
+      }
+      strsize += sh.sh_size;  //there may be several string tables
+    }
+  }
+  return EL_OK;
+}
+
+
 typedef union {
   uint64 buf[MAX_CMDLINE_ARGS];
   char *argv[MAX_CMDLINE_ARGS];
@@ -113,8 +140,6 @@ void load_bincode_from_host_elf(process *p) {
 
   sprint("Application: %s\n", arg_bug_msg.argv[0]);
 
-  //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
-  elf_ctx elfloader;
   // elf_info is defined above, used to tie the elf file and its corresponding process.
   elf_info info;
 
@@ -124,15 +149,16 @@ void load_bincode_from_host_elf(process *p) {
   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
 
   // init elfloader context. elf_init() is defined above.
-  if (elf_init(&elfloader, &info) != EL_OK)
+  if (elf_init(&elfsymbol, &info) != EL_OK)
     panic("fail to init elfloader.\n");
 
   // load elf. elf_load() is defined above.
-  if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
+  if (elf_load(&elfsymbol) != EL_OK) panic("Fail on loading elf.\n");
 
   // entry (virtual, also physical in lab1_x) address
-  p->trapframe->epc = elfloader.ehdr.entry;
+  p->trapframe->epc = elfsymbol.ehdr.entry;
 
+  if (elf_load_symbol(&elfsymbol) != EL_OK) panic("Fail on loading elf symbols.\n");
   // close the host spike file
   spike_file_close( info.f );
 
