@@ -30,7 +30,7 @@ extern char trap_sec_start[];
 process procs[NPROC];
 
 // current points to the currently running user-mode application.
-process* current = NULL;
+process *current = NULL;
 
 // points to the first free page in our simple heap. added @lab2_2
 uint64 g_ufree_page = USER_FREE_ADDRESS_START;
@@ -38,20 +38,20 @@ uint64 g_ufree_page = USER_FREE_ADDRESS_START;
 //
 // switch to a user-mode process
 //
-void switch_to(process* proc) {
+void switch_to(process *proc) {
   assert(proc);
   current = proc;
 
   // write the smode_trap_vector (64-bit func. address) defined in kernel/strap_vector.S
   // to the stvec privilege register, such that trap handler pointed by smode_trap_vector
   // will be triggered when an interrupt occurs in S mode.
-  write_csr(stvec, (uint64)smode_trap_vector);
+  write_csr(stvec, (uint64) smode_trap_vector);
 
   // set up trapframe values (in process structure) that smode_trap_vector will need when
   // the process next re-enters the kernel.
   proc->trapframe->kernel_sp = proc->kstack;      // process's kernel stack
   proc->trapframe->kernel_satp = read_csr(satp);  // kernel page table
-  proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
+  proc->trapframe->kernel_trap = (uint64) smode_trap_handler;
 
   // SSTATUS_SPP and SSTATUS_SPIE are defined in kernel/riscv.h
   // set S Previous Privilege mode (the SSTATUS_SPP bit in sstatus register) to User mode.
@@ -77,7 +77,7 @@ void switch_to(process* proc) {
 // initialize process pool (the procs[] array). added @lab3_1
 //
 void init_proc_pool() {
-  memset( procs, 0, sizeof(process)*NPROC );
+  memset(procs, 0, sizeof(process) * NPROC);
 
   for (int i = 0; i < NPROC; ++i) {
     procs[i].status = FREE;
@@ -89,58 +89,58 @@ void init_proc_pool() {
 // allocate an empty process, init its vm space. returns the pointer to
 // process strcuture. added @lab3_1
 //
-process* alloc_process() {
+process *alloc_process() {
   // locate the first usable process structure
   int i;
 
-  for( i=0; i<NPROC; i++ )
-    if( procs[i].status == FREE ) break;
+  for (i = 0; i < NPROC; i++)
+    if (procs[i].status == FREE) break;
 
-  if( i>=NPROC ){
-    panic( "cannot find any free process structure.\n" );
+  if (i >= NPROC) {
+    panic("cannot find any free process structure.\n");
     return 0;
   }
 
   // init proc[i]'s vm space
-  procs[i].trapframe = (trapframe *)alloc_page();  //trapframe, used to save context
+  procs[i].trapframe = (trapframe *) alloc_page();  //trapframe, used to save context
   memset(procs[i].trapframe, 0, sizeof(trapframe));
 
   // page directory
-  procs[i].pagetable = (pagetable_t)alloc_page();
-  memset((void *)procs[i].pagetable, 0, PGSIZE);
+  procs[i].pagetable = (pagetable_t) alloc_page();
+  memset((void *) procs[i].pagetable, 0, PGSIZE);
 
-  procs[i].kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
-  uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
+  procs[i].kstack = (uint64) alloc_page() + PGSIZE;   //user kernel stack top
+  uint64 user_stack = (uint64) alloc_page();       //phisical address of user stack bottom
   procs[i].trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
 
   // allocates a page to record memory regions (segments)
-  procs[i].mapped_info = (mapped_region*)alloc_page();
-  memset( procs[i].mapped_info, 0, PGSIZE );
+  procs[i].mapped_info = (mapped_region *) alloc_page();
+  memset(procs[i].mapped_info, 0, PGSIZE);
 
   // map user stack in userspace
-  user_vm_map((pagetable_t)procs[i].pagetable, USER_STACK_TOP - PGSIZE, PGSIZE,
-    user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
+  user_vm_map((pagetable_t) procs[i].pagetable, USER_STACK_TOP - PGSIZE, PGSIZE,
+              user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
   procs[i].mapped_info[0].va = USER_STACK_TOP - PGSIZE;
   procs[i].mapped_info[0].npages = 1;
   procs[i].mapped_info[0].seg_type = STACK_SEGMENT;
 
   // map trapframe in user space (direct mapping as in kernel space).
-  user_vm_map((pagetable_t)procs[i].pagetable, (uint64)procs[i].trapframe, PGSIZE,
-    (uint64)procs[i].trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
-  procs[i].mapped_info[1].va = (uint64)procs[i].trapframe;
+  user_vm_map((pagetable_t) procs[i].pagetable, (uint64) procs[i].trapframe, PGSIZE,
+              (uint64) procs[i].trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
+  procs[i].mapped_info[1].va = (uint64) procs[i].trapframe;
   procs[i].mapped_info[1].npages = 1;
   procs[i].mapped_info[1].seg_type = CONTEXT_SEGMENT;
 
   // map S-mode trap vector section in user space (direct mapping as in kernel space)
   // we assume that the size of usertrap.S is smaller than a page.
-  user_vm_map((pagetable_t)procs[i].pagetable, (uint64)trap_sec_start, PGSIZE,
-    (uint64)trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
-  procs[i].mapped_info[2].va = (uint64)trap_sec_start;
+  user_vm_map((pagetable_t) procs[i].pagetable, (uint64) trap_sec_start, PGSIZE,
+              (uint64) trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
+  procs[i].mapped_info[2].va = (uint64) trap_sec_start;
   procs[i].mapped_info[2].npages = 1;
   procs[i].mapped_info[2].seg_type = SYSTEM_SEGMENT;
 
   sprint("in alloc_proc. user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n",
-    procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
+         procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
 
   procs[i].total_mapped_region = 3;
   // return after initialization.
@@ -150,7 +150,7 @@ process* alloc_process() {
 //
 // reclaim a process. added @lab3_1
 //
-int free_process( process* proc ) {
+int free_process(process *proc) {
   // we set the status to ZOMBIE, but cannot destruct its vm space immediately.
   // since proc can be current process, and its user kernel stack is currently in use!
   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
@@ -167,21 +167,19 @@ int free_process( process* proc ) {
 // segments (code, system) of the parent to child. the stack segment remains unchanged
 // for the child.
 //
-int do_fork( process* parent)
-{
-  sprint( "will fork a child from parent %d.\n", parent->pid );
-  process* child = alloc_process();
+int do_fork(process *parent) {
+  sprint("will fork a child from parent %d.\n", parent->pid);
+  process *child = alloc_process();
 
-  for( int i=0; i<parent->total_mapped_region; i++ ){
+  for (int i = 0; i < parent->total_mapped_region; i++) {
     // browse parent's vm space, and copy its trapframe and data segments,
     // map its code segment.
-    switch( parent->mapped_info[i].seg_type ){
-      case CONTEXT_SEGMENT:
-        *child->trapframe = *parent->trapframe;
+    switch (parent->mapped_info[i].seg_type) {
+      case CONTEXT_SEGMENT:*child->trapframe = *parent->trapframe;
         break;
       case STACK_SEGMENT:
-        memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[0].va),
-          (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
+        memcpy((void *) lookup_pa(child->pagetable, child->mapped_info[0].va),
+               (void *) lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE);
         break;
       case CODE_SEGMENT:
         // TODO (lab3_1): implment the mapping of child code segment to parent's
@@ -194,19 +192,19 @@ int do_fork( process* parent)
         // segment of parent process.
         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
       {
-          uint64 parent_va = parent->mapped_info[i].va;
-          uint64 parent_pa = lookup_pa(parent->pagetable, parent_va);
-          user_vm_map(child->pagetable, parent_va, PGSIZE * parent->mapped_info[i].npages, parent_pa,
-                      prot_to_type(PROT_READ | PROT_EXEC, 1));
-          sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", parent_pa, parent_va);
+        uint64 parent_va = parent->mapped_info[i].va;
+        uint64 parent_pa = lookup_pa(parent->pagetable, parent_va);
+        user_vm_map(child->pagetable, parent_va, PGSIZE * parent->mapped_info[i].npages, parent_pa,
+                    prot_to_type(PROT_READ | PROT_EXEC, 1));
+        sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", parent_pa, parent_va);
 
-          // after mapping, register the vm region (do not delete codes below!)
-          child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-          child->mapped_info[child->total_mapped_region].npages =
-                  parent->mapped_info[i].npages;
-          child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
-          child->total_mapped_region++;
-          break;
+        // after mapping, register the vm region (do not delete codes below!)
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].npages =
+            parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
+        child->total_mapped_region++;
+        break;
       }
     }
   }
@@ -214,7 +212,46 @@ int do_fork( process* parent)
   child->status = READY;
   child->trapframe->regs.a0 = 0;
   child->parent = parent;
-  insert_to_ready_queue( child );
+  insert_to_ready_queue(child);
 
   return child->pid;
+}
+
+semaphore sems[NPROC];
+int alloc_sem(int value) {
+  for (int i = 0; i < NPROC; i++)
+    if (!sems[i].occupied) {
+      sems[i].occupied = 1;
+      sems[i].value = value;
+      sems[i].wait_head = sems[i].wait_tail = 0;
+      return i;
+    }
+  return -1;
+}
+int inc_sem(int sem) {
+  if (sem < 0 || sem >= NPROC) return -1;
+  sems[sem].value++;
+  if (sems[sem].wait_head) {
+    process *t = sems[sem].wait_head;
+    sems[sem].wait_head = t->queue_next;
+    if (t->queue_next == 0) sems[sem].wait_tail = 0;
+    insert_to_ready_queue(t);
+  }
+  return 0;
+}
+int dec_sem(int sem) {
+  if (sem < 0 || sem >= NPROC) return -1;
+  sems[sem].value--;
+  if (sems[sem].value < 0) {
+    if (sems[sem].wait_head == 0) {
+      sems[sem].wait_head = sems[sem].wait_tail = current;
+      current->queue_next = 0;
+    } else {
+      sems[sem].wait_tail->queue_next = current->queue_next;
+      sems[sem].wait_tail = current;
+    }
+    current->status = BLOCKED;
+    schedule();
+  }
+  return 0;
 }

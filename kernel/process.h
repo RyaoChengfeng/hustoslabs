@@ -16,7 +16,7 @@ typedef struct trapframe_t {
 
   // kernel page table. added @lab2_1
   /* offset:272 */ uint64 kernel_satp;
-}trapframe;
+} trapframe;
 
 // riscv-pke kernel supports at most 32 processes
 #define NPROC 32
@@ -53,7 +53,7 @@ typedef struct process_t {
   // user page table
   pagetable_t pagetable;
   // trapframe storing the context of a (User mode) process.
-  trapframe* trapframe;
+  trapframe *trapframe;
 
   // points to a page that contains mapped_regions. below are added @lab3_1
   mapped_region *mapped_info;
@@ -71,30 +71,39 @@ typedef struct process_t {
 
   // accounting. added @lab3_3
   int tick_count;
-}process;
+} process;
+
+typedef struct semaphore {
+  int value, occupied;
+  process *wait_head, *wait_tail;
+} semaphore;
 
 // switch to run user app
-void switch_to(process*);
+void switch_to(process *);
 
 // initialize process pool (the procs[] array)
 void init_proc_pool();
 // allocate an empty process, init its vm space. returns its pid
-process* alloc_process();
+process *alloc_process();
 // reclaim a process, destruct its vm space and free physical pages.
-int free_process( process* proc );
+int free_process(process *proc);
 // fork a child from parent
-int do_fork(process* parent);
+int do_fork(process *parent);
 // initialize process pool (the procs[] array)
 void init_proc_pool();
 // allocate an empty process, init its vm space. returns its pid
-process* alloc_process();
+process *alloc_process();
 // reclaim a process, destruct its vm space and free physical pages.
-int free_process( process* proc );
+int free_process(process *proc);
 // fork a child from parent
-int do_fork(process* parent);
+int do_fork(process *parent);
+
+int alloc_sem(int);
+int inc_sem(int);
+int dec_sem(int);
 
 // current running process
-extern process* current;
+extern process *current;
 
 // address of the first free page in our simple heap. added @lab2_2
 extern uint64 g_ufree_page;
