@@ -56,6 +56,7 @@ ssize_t sys_user_backtrace(int64 depth) {
   // consider the simple case where functions in the path have NO parameters, we can do
   // it by simply bypassing 16 bytes at each depth.
   // the traverse direction is from lower addresses to higher addressese.
+  user_sp += 16;
   int64 actual_depth = 0;
   for (uint64 p = user_sp; actual_depth < depth; ++actual_depth, p += 16) {
     // the return address is stored in (uint64*)p
